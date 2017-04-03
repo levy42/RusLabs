@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+<head>
+    {% block head %}
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.9/semantic.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.9/semantic.min.js"></script>
+    <title>{% block title %}{% endblock %} - Graph Levitski Lab1</title>
+    {% endblock %}
+</head>
+<body>
+<div id="content">{% block content %}{% endblock %}</div>
+<div id="footer" class="footer-right">
+    {% block footer %}
+    {% endblock %}
+</div>
+</body>
+</html>

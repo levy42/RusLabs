@@ -1,0 +1,58 @@
+{% extends "index.html" %}
+{% block title %}Моделювання{% endblock %}
+{% block head %}
+{{ super() }}
+{% endblock %}
+{% block content %}
+{{ super() }}
+<div class="ui container">
+    <div class="ui compact big secondary pointing menu">
+        <a class="active item" href="{{ url_for('modeling_parameters') }}">
+            Параметри
+        </a>
+        <a class="item" href="{{ url_for('modeling_ganta') }}">
+            Діаграма Ганта
+        </a>
+        <a class="item"
+           href="{{ url_for('modeling_statistics') }}">
+            Статистика
+        </a>
+    </div>
+    <form action="." class="ui form segment">
+        <div class="field">
+            <label>Число фізичних лінків</label>
+            <input type="text" name="link_number"
+                   value="{{ parameters.link_number }}">
+        </div>
+        <div class="field">
+            <div class="ui toggle checkbox">
+                <input type="checkbox" name="is_io" {% if
+                       parameters.is_io %}checked{% endif %}>
+                <label>Наявність пристрою вводу-виводу</label>
+            </div>
+        </div>
+        <div class="field">
+            <div class="ui toggle checkbox">
+                <input type="checkbox" name="link_duplex" {% if
+                       parameters.link_duplex %}checked{% endif %}>
+                <label>Дуплексність зв’язків</label>
+            </div>
+        </div>
+        <div class="field">
+            <label>Тип пересилки повідомлень</label>
+            <select class="ui select" name="send_type">
+                {% for item in send_types %}
+                <option {% if item== parameters.send_type %}selected{% endif %}>
+                    {{ item }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field">
+            <label>Довжина пакету</label>
+            <input name="packet_length" value="{{ parameters.packet_length }}">
+        </div>
+        <button class="ui positive button">Зберегти</button>
+    </form>
+</div>
+{% endblock %}

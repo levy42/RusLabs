@@ -1,0 +1,43 @@
+{% extends "index.html" %}
+{% block title %}Граф задач{% endblock %}
+{% block head %}
+{{ super() }}
+{% endblock %}
+{% block content %}
+{{ super() }}
+<div class="ui container">
+    <h2>Грaфи задач</h2>
+    <table class="ui celled table">
+        <thead>
+        <tr>
+            <th>Ім`я</th>
+            <th>Дата створення</th>
+            <th></th>
+        </tr>
+        </thead>
+        {% for g in graphs %}
+        <tr>
+            <th>{{ g.name }}</th>
+            <th>{{ g.date }}</th>
+            <th><a class="iu green button">Завантажити</a></th>
+            <th><a class="ui button red">Видалити</a></th>
+        </tr>
+        {% endfor %}
+    </table>
+    {% if not graphs %}
+    <p>Немає створених графів</p>
+    {% endif %}
+    <div class="ui divider"></div>
+    <form class="ui compact form" action="{{ url_for('load_task_graph') }}">
+        <div class="field">
+            <label>Завантажити граф з файлу:</label>
+            <input type="file" name="file">
+        </div>
+        <button type="submit" class="ui field
+        basic positive button">Завантажити
+            </button>
+    </form>
+    <div class="ui divider"></div>
+    <div class="ui green button">Створити</div>
+</div>
+{% endblock %}

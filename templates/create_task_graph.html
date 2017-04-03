@@ -1,0 +1,46 @@
+{% extends "index.html" %}
+{% block title %}Граф задач{% endblock %}
+{% block head %}
+{{ super() }}
+{% endblock %}
+{% block content %}
+{{ super() }}
+<div class="ui container">
+    <form class="ui form" action="." method="post">
+        <div class="field">
+            <h3>Ім'я графу задач</h3>
+            <input type="text" name="name">
+            <input name="graph" hidden>
+        </div>
+    </form>
+    <div class="segment">
+        <h2>Редактор графу</h2>
+        <div class="ui inline compact form">
+            <h3>Додати вершину</h3>
+            <div class="inline fields">
+                <input id="new_vertex" type="text"
+                       placeholder="Ім'я вершини">
+                <button class="ui positive button">Додати</button>
+            </div>
+        </div>
+        <div class="ui inline compact form">
+            <h3 class="field">Додати зв'язок</h3>
+            <div class="inline fields">
+                <input id="vertex1" type="text"
+                       placeholder="Ім'я вершини 1">
+                <input id="vertex2" type="text"
+                       placeholder="Ім'я вершини 2">
+                <input id="weight" type="text" placeholder="Вага">
+                <button class="ui positive button">Додати</button>
+            </div>
+        </div>
+    </div>
+    <div class="ui form">
+        <label>Завантажити граф з файлу:</label>
+        <input type="file" name="file">
+        <div class="field">
+            <button class="ui positive button">Завантажити</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

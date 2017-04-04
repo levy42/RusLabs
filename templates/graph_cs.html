@@ -1,10 +1,49 @@
 {% extends "index.html" %}
-{% block title %}Граф КС{% endblock %}
+{% block title %}Граф комп'ютерних систем{% endblock %}
 {% block head %}
-{{ super() }}
+    {{ super() }}
 {% endblock %}
 {% block content %}
-{{ super() }}
-<div class="ui container">
-</div>
+    {{ super() }}
+    <div class="ui container">
+        {% if graphs %}
+            <h2>Грaфи комп'ютерних систем</h2>
+            <table class="ui table">
+                <thead>
+                <tr>
+                    <th>Ім`я</th>
+                    <th>Дата створення</th>
+                    <th>Дата оновлення</th>
+                    <th>Завантажити</th>
+                    <th>Видалити</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for g in graphs %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('save_cs_graph',id=g.id) }}">
+                                {{ g.name }}
+                            </a>
+                        </td>
+                        <td>{{ g.created_at }}</td>
+                        <td>{{ g.updated_at }}</td>
+                        <td>
+                            <a href="{{ url_for('download_cs_graph', id=g.id) }}"><i
+                                    class="download big green icon"></i></a></td>
+                        <td>
+                            <a href="{{ url_for('delete_cs_graph', id=g.id) }}"><i
+                                    class="remove big red icon"></i></a></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+        {% if not graphs %}
+            <p>Немає створених графів</p>
+        {% endif %}
+        <div class="ui divider"></div>
+        <a class="ui basic positive button"
+           href="{{ url_for('save_cs_graph') }}">Створити</a>
+    </div>
 {% endblock %}

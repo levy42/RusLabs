@@ -1,6 +1,10 @@
+from datetime import datetime
+import json
+
 from flask import Flask
 from flask import render_template
 from flask_sqlalchemy import SQLAlchemy
+from flask import make_response
 from flask import request
 from flask import redirect
 from flask import url_for
@@ -11,6 +15,16 @@ app.config.from_mapping(SECRET_KEY='secret',
 db = SQLAlchemy(app)
 
 
+# Models
+
+class GraphError(object):
+    def __init__(self, cause='У графі знайдено цикли!'):
+        self.cause = cause
+
+    def __repr__(self):
+        return 'Невалідний граф. %s' % self.cause
+
+
 class SendDataType():
     MESSAGE = 'Пересилка повідомлень'
     CONVEY = 'Конвеєризація пересилок пакетами'
@@ -19,14 +33,16 @@ class SendDataType():
 class TaskGraph(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String)
-    datetime = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime)
+    updated_at = db.Column(db.DateTime)
     data = db.Column(db.String)
 
 
-class GraphCS(db.Model):
+class CSGraph(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String)
-    datetime = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime)
+    updated_at = db.Column(db.DateTime)
     data = db.Column(db.String)
 
 
@@ -42,6 +58,8 @@ class Parameters(db.Model):
 db.create_all()
 
 
+# views
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -49,17 +67,14 @@ def index():
 
 @app.route('/task-graph/')
 def task_graph():
-    return render_template('task_graph.html')
+    graphs = TaskGraph.query.all()
+    return render_template('task_graph.html', graphs=graphs)
 
 
-@app.route('/graph-cs/')
-def graph_ks():
-    return render_template('graph_cs.html')
-
-
-@app.route('/modeling/')
-def modeling():
-    return render_template('modeling.html')
+@app.route('/cs-graph/')
+def cs_graph():
+    graphs = CSGraph.query.all()
+    return render_template('graph_cs.html', graphs=graphs)
 
 
 @app.route('/statistics/')
@@ -67,16 +82,90 @@ def statistics():
     return render_template('statistics.html')
 
 
-@app.route('/task-graph/create/', methods=['GET', 'POST'])
-def create_task_graph():
+@app.route('/task-graph/save/', methods=['GET', 'POST'])
+@app.route('/task-graph/save/<id>/', methods=['GET', 'POST'])
+def save_task_graph(id=None):
+    graph = None
+    if id:
+        graph = TaskGraph.query.get(id)
     if request.method == 'GET':
-        return render_template('create_task_graph.html')
+        return render_template('task_graph_redactor.html', graph=graph)
+    if request.method == 'POST':
+        if not id:
+            graph = TaskGraph()
+            graph.created_at = datetime.now()
+        graph.name = request.form.get('name') or 'Граф без роду без імені'
+        graph.updated_at = datetime.now()
+        graph.data = request.form.get('graph')
+        graph_data = json.loads(graph.data)
+        try:
+            if graph_has_cycle(graph_data):
+                return render_template('task_graph_redactor.html', graph=graph,
+                                       error=GraphError())
+        except Exception as e:
+            print("Failed to check graph cycles. Error %s" % e)
+        db.session.add(graph)
+        db.session.commit()
+        return redirect(url_for('save_task_graph', id=graph.id))
 
 
-@app.route('/task-graph/load/', methods=['GET', 'POST'])
-def load_task_graph():
+@app.route('/task-graph/<id>/download/')
+def download_task_graph(id):
+    graph = TaskGraph.query.get(id)
+    response = make_response(graph.data)
+    response.headers["Content-Disposition"] = "attachment; filename=graph.json"
+    return response
+
+
+@app.route('/task-graph/<id>/delete')
+def delete_task_graph(id):
+    graph = TaskGraph.query.get(id)
+    if graph:
+        db.session.delete(graph)
+        db.session.commit()
+    return redirect(url_for('task_graph'))
+
+
+@app.route('/cs-graph/save/', methods=['GET', 'POST'])
+@app.route('/cs-graph/save/<id>/', methods=['GET', 'POST'])
+def save_cs_graph(id=None):
+    graph = None
+    if id:
+        graph = CSGraph.query.get(id)
     if request.method == 'GET':
-        return render_template('create_task_graph.html')
+        return render_template('cs_graph_redactor.html', graph=graph)
+    if request.method == 'POST':
+        if not id:
+            graph = CSGraph()
+            graph.created_at = datetime.now()
+        graph.name = request.form.get('name') or 'Граф без роду без імені'
+        graph.updated_at = datetime.now()
+        graph.data = request.form.get('graph')
+        db.session.add(graph)
+        db.session.commit()
+        return redirect(url_for('save_cs_graph', id=graph.id))
+
+
+@app.route('/cs-graph/<id>/download/')
+def download_cs_graph(id):
+    graph = CSGraph.query.get(id)
+    response = make_response(graph.data)
+    response.headers["Content-Disposition"] = "attachment; filename=graph.json"
+    return response
+
+
+@app.route('/cs-graph/<id>/delete')
+def delete_cs_graph(id):
+    graph = CSGraph.query.get(id)
+    if graph:
+        db.session.delete(graph)
+        db.session.commit()
+    return redirect(url_for('cs_graph'))
+
+
+@app.route('/modeling/')
+def modeling():
+    return redirect(url_for('modeling_parameters'))
 
 
 @app.route('/modeling/parameters/')
@@ -110,6 +199,32 @@ def modeling_statistics():
 @app.route('/help')
 def help():
     return render_template('help.html')
+
+
+# tools
+
+def graph_has_cycle(graph):
+    g = {}
+    for v in graph['nodeDataArray']:
+        g[v['id']] = []
+    for d in graph['linkDataArray']:
+        g[d['from']].append(d['to'])
+
+    vertex = list(g.keys())[0]
+    cur_path = set()
+
+    def is_cyclic(g, vertex):
+        cur_path.add(vertex)
+        for neighboor in g.get(vertex, []):
+            if neighboor in cur_path:
+                return True
+            else:
+                if neighboor in g and is_cyclic(g, neighboor):
+                    return True
+        cur_path.remove(vertex)
+        return False
+
+    return is_cyclic(g, vertex)
 
 
 if __name__ == '__main__':

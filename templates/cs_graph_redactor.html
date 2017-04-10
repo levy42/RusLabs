@@ -3,6 +3,23 @@
 {% block head %}
     {{ super() }}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gojs/1.7.6/go.js"></script>
+    <style>
+        label.file input[type="file"] {
+            position: fixed;
+            top: -1000px;
+        }
+
+        .file {
+            display: inline-block;
+            border: 2px dashed #acacac;
+            border-radius: 3px;
+            padding: 0.5rem;
+        }
+
+        .file span:hover {
+            color: #e96562;
+        }
+    </style>
 {% endblock %}
 {% block content %}
     {{ super() }}
@@ -21,8 +38,19 @@
                     onclick="save()">Зберегти
             </button>
         </form>
-        <div class="field"><label>Завантажити граф з файлу:</label>
-            <input id="file" type="file" name="file"></div>
+        {% if error %}
+            <div class="ui negative message">
+                <i class="close icon"></i>
+                <div class="header">
+                    {{ error }}
+                </div>
+            </div>
+        {% endif %}
+        <div class="ui divider"></div>
+        <label class="file">
+            <input id="file" type="file" name="file" accept=".json">
+            <span>Завантажити граф з файлу:</span>
+        </label>
     </div>
     <script id="code">
         function init() {
@@ -150,8 +178,6 @@
                             new go.Binding("curviness"),
                             $(go.Shape,  // the link shape
                                     {strokeWidth: 1.5}),
-                            $(go.Shape,  // the arrowhead
-                                    {toArrow: "standard", stroke: null}),
                             $(go.Panel, "Auto",
                                     $(go.Shape,  // the label background, which becomes transparent around the edges
                                             {

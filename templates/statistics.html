@@ -1,11 +1,23 @@
 {% extends "index.html" %}
 {% block title %}Статистика{% endblock %}
 {% block head %}
-{{ super() }}
+    {{ super() }}
 {% endblock %}
 {% block content %}
-{{ super() }}
-<div class="ui container">
-<h3>Тут буде якась статистика :)</h3>
-</div>
+    {{ super() }}
+    <div class="ui container">
+        <div class="ui top attached tabular menu">
+            <a class="item active" data-tab="first">Параметри статистики</a>
+            <a class="item" data-tab="second">Результати статистики</a>
+        </div>
+        <div class="ui bottom attached tab segment active" data-tab="first">
+            <h3>Якість параметри</h3>
+        </div>
+        <div class="ui bottom attached tab segment" data-tab="second">
+            <h3>Якість результати</h3>
+        </div>
+    </div>
+    <script>
+        $('.menu .item').tab();
+    </script>
 {% endblock %}

@@ -2,7 +2,25 @@
 {% block title %}Граф задач{% endblock %}
 {% block head %}
     {{ super() }}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gojs/1.7.6/go.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gojs/1.7.6/go.js"
+            xmlns="http://www.w3.org/1999/html"></script>
+    <style>
+        label.file input[type="file"] {
+            position: fixed;
+            top: -1000px;
+        }
+
+        .file {
+            display: inline-block;
+            border: 2px dashed #acacac;
+            border-radius: 3px;
+            padding: 0.5rem;
+        }
+
+        .file span:hover {
+            color: #e96562;
+        }
+    </style>
 {% endblock %}
 {% block content %}
     {{ super() }}
@@ -25,12 +43,15 @@
                     </div>
                 </div>
             {% endif %}
-            <button class="ui positive basic button" id="SaveButton"
+            <button class="ui positive button" id="SaveButton"
                     onclick="save()">Зберегти
             </button>
         </form>
-        <div class="field"><label>Завантажити граф з файлу:</label>
-            <input id="file" type="file" name="file"></div>
+        <div class="ui divider"></div>
+        <label class="file">
+            <input id="file" type="file" name="file" accept=".json">
+            <span>Завантажити граф з файлу:</span>
+        </label>
     </div>
     <script id="code">
         function init() {

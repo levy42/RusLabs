@@ -98,22 +98,26 @@ def save_task_graph(id=None):
         graph.updated_at = datetime.now()
         graph.data = request.form.get('graph')
         graph_data = json.loads(graph.data)
-        try:
-            if graph_has_cycle(graph_data):
-                return render_template('task_graph_redactor.html', graph=graph,
-                                       error=GraphError())
-        except Exception as e:
-            print("Failed to check graph cycles. Error %s" % e)
-        db.session.add(graph)
-        db.session.commit()
-        return redirect(url_for('save_task_graph', id=graph.id))
+    try:
+        if graph_has_cycle(graph_data):
+            return render_template('task_graph_redactor.html', graph=graph,
+                                   error=GraphError())
+        if check_connected(graph_data):
+            return render_template('task_graph_redactor.html', graph=graph,
+                                   error=GraphError('Граф не звязний!'))
+    except Exception as e:
+        print("Failed to check graph cycles. Error %s" % e)
+    db.session.add(graph)
+    db.session.commit()
+    return redirect(url_for('save_task_graph', id=graph.id))
 
 
 @app.route('/task-graph/<id>/download/')
 def download_task_graph(id):
     graph = TaskGraph.query.get(id)
     response = make_response(graph.data)
-    response.headers["Content-Disposition"] = "attachment; filename=graph.json"
+    response.headers[
+        "Content-Disposition"] = "attachment; filename=%s.json" % graph.name
     return response
 
 
@@ -141,16 +145,24 @@ def save_cs_graph(id=None):
         graph.name = request.form.get('name') or 'Граф без роду без імені'
         graph.updated_at = datetime.now()
         graph.data = request.form.get('graph')
-        db.session.add(graph)
-        db.session.commit()
-        return redirect(url_for('save_cs_graph', id=graph.id))
+        graph_data = json.loads(graph.data)
+        try:
+            if check_connected(graph_data):
+                return render_template('cs_graph_redactor.html', graph=graph,
+                                       error=GraphError('Граф не звязний!'))
+        except Exception:
+            pass
+    db.session.add(graph)
+    db.session.commit()
+    return redirect(url_for('save_cs_graph', id=graph.id))
 
 
 @app.route('/cs-graph/<id>/download/')
 def download_cs_graph(id):
     graph = CSGraph.query.get(id)
     response = make_response(graph.data)
-    response.headers["Content-Disposition"] = "attachment; filename=graph.json"
+    response.headers[
+        "Content-Disposition"] = "attachment; filename=%s.json" % graph.name
     return response
 
 
@@ -225,6 +237,30 @@ def graph_has_cycle(graph):
         return False
 
     return is_cyclic(g, vertex)
+
+
+def check_connected(graph):
+    n, m = len(graph['nodeDataArray']), len(
+            graph['linkDataArray'])  # количество вершин и ребер в графе
+    adj = {i['id']: [] for i in graph['nodeDataArray']}  # список смежности
+    for a in graph['linkDataArray']:
+        adj[a['from']].append(a['to'])
+        adj[a['to']].append(a['from'])
+    used = {i['id']: False for i in graph['nodeDataArray']}
+
+    def dfs(v):
+        if used[v]:
+            return
+        used[v] = True
+        print(v + 1, end=' ')
+        for w in adj[v]:
+            dfs(w)
+
+    dfs(graph['nodeDataArray'][0]['id'])
+    for u in used.values():
+        if not u:
+            return True
+    return False
 
 
 if __name__ == '__main__':

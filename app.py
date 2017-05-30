@@ -35,6 +35,7 @@ class TaskGraph(db.Model):
     name = db.Column(db.String)
     created_at = db.Column(db.DateTime)
     updated_at = db.Column(db.DateTime)
+    queue = db.Column(db.String)
     data = db.Column(db.String)
 
 
@@ -56,6 +57,11 @@ class Parameters(db.Model):
 
 
 db.create_all()
+
+
+@app.context_processor
+def context():
+    return dict(render_ganta=render_diagram_ganta)
 
 
 # views
@@ -82,8 +88,8 @@ def statistics():
     return render_template('statistics.html')
 
 
-@app.route('/task-graph/save/', methods=['GET', 'POST'])
-@app.route('/task-graph/save/<id>/', methods=['GET', 'POST'])
+@app.route('/task-graph/', methods=['GET', 'POST'])
+@app.route('/task-graph/<id>/', methods=['GET', 'POST'])
 def save_task_graph(id=None):
     graph = None
     if id:
@@ -102,14 +108,43 @@ def save_task_graph(id=None):
         if graph_has_cycle(graph_data):
             return render_template('task_graph_redactor.html', graph=graph,
                                    error=GraphError())
-        if check_connected(graph_data):
+        if validate_and_format_graph(graph_data):
+            graph.data = json.dumps(graph_data)
+        else:
             return render_template('task_graph_redactor.html', graph=graph,
-                                   error=GraphError('Граф не звязний!'))
+                                   error=GraphError(cause="Не валідний граф"))
     except Exception as e:
         print("Failed to check graph cycles. Error %s" % e)
     db.session.add(graph)
     db.session.commit()
     return redirect(url_for('save_task_graph', id=graph.id))
+
+
+@app.route('/task-graph/<id>/generate-queue')
+def generate_queue(id):
+    graph = TaskGraph.query.get(id)
+    queue_type = int(request.args.get('queue_type', 3))
+    queue = None
+    g = json.loads(graph.data)
+    if queue_type == 3:
+        queue = get_queue3(g)
+    if queue_type == 6:
+        queue = get_queue6(g)
+    if queue_type == 11:
+        queue = get_queue11(g)
+
+    def get_name(id):
+        v = [i for i in g['nodeDataArray'] if i['id'] == id][0]
+        return v['text'].split('(')[0][:-1]
+
+    queue = [get_name(v) for v in queue]
+
+    graph.queue = json.dumps(queue)
+    db.session.add(graph)
+    db.session.commit()
+
+    return render_template('task_graph_redactor.html', graph=graph,
+                           queue=queue)
 
 
 @app.route('/task-graph/<id>/download/')
@@ -198,9 +233,17 @@ def modeling_parameters():
                                        SendDataType.MESSAGE])
 
 
-@app.route('/modeling/ganta/')
+@app.route('/modeling/ganta/', methods=['GET', 'POST'])
 def modeling_ganta():
-    return render_template('modeling_ganta.html')
+    if request.method == 'GET':
+        return render_template('modeling_ganta.html')
+    else:
+        task_graph_id = request.form.get('task_graph')
+        system_graph_id = request.form.get('system_graph')
+        task_graph = TaskGraph.query.get(task_graph_id)
+        system_graph = CSGraph.query.get(system_graph_id)
+        diagram = create_ganta_diagram(task_graph, system_graph)
+        return render_template('modeling_ganta.html', diagram=diagram)
 
 
 @app.route('/modeling/statistics/')
@@ -214,6 +257,10 @@ def help():
 
 
 # tools
+
+def create_ganta_diagram(task_graph, system_graph):
+    pass
+
 
 def graph_has_cycle(graph):
     g = {}
@@ -261,6 +308,130 @@ def check_connected(graph):
         if not u:
             return True
     return False
+
+
+def DFS(G, v, seen=None, path=None):
+    if seen is None: seen = []
+    if path is None: path = [v]
+
+    seen.append(v)
+
+    paths = []
+    for t in G[v]:
+        if t not in seen:
+            t_path = path + [t]
+            paths.append(tuple(t_path))
+            paths.extend(DFS(G, t, seen[:], t_path))
+    return paths
+
+
+def convert(graph):
+    adj = {i['id']: [] for i in graph['nodeDataArray']}  # список смежности
+    for a in graph['linkDataArray']:
+        adj[a['from']].append(a['to'])
+    return adj
+
+
+def convert_inverted(graph):
+    adj = {i['id']: [] for i in graph['nodeDataArray']}  # список смежности
+    for a in graph['linkDataArray']:
+        adj[a['to']].append(a['from'])
+    return adj
+
+
+def get_weights(graph):
+    weights = {}
+    for a in graph['nodeDataArray']:
+        weight = int(a['text'].split('(')[1][:-1])
+        weights[a['id']] = weight
+    return weights
+
+
+def get_queue3(graph):
+    g = convert(graph)
+    weights = get_weights(graph)
+    path_values = {}
+    for w in g:
+        all_paths = DFS(g, w)
+        max_path = 0
+        if not all_paths:
+            max_path = weights[w]
+        else:
+            for p in all_paths:
+                path_len = 0
+                for v in p:
+                    weight = weights[v]
+                    path_len += weight
+                if path_len > max_path:
+                    max_path = path_len
+        path_values[w] = max_path
+
+    def sort_key(w):
+        return path_values[w]
+
+    return sorted(list(g.keys()), key=sort_key, reverse=True)
+
+
+def get_queue6(graph):
+    g = convert(graph)
+    path_values = {}
+    for w in g:
+        all_paths = DFS(g, w)
+        max_path = max(len(p) for p in all_paths) if all_paths else 0
+        path_values[w] = max_path
+
+    def sort_key(w):
+        return path_values[w]
+
+    return sorted(list(g.keys()), key=sort_key, reverse=True)
+
+
+def get_queue11(graph):
+    g = convert_inverted(graph)
+    g_real = convert(graph)
+    path_values = {}
+    for w in g:
+        all_paths = DFS(g, w)
+        max_path = max(len(p) for p in all_paths) if all_paths else 0
+        path_values[w] = max_path
+
+    def sort_key(w):
+        return (len(g[w]) + len(g_real[w])) * 1000 - path_values[w]
+
+    return sorted(list(g.keys()), key=sort_key, reverse=True)
+
+
+def validate_and_format_graph(g):
+    for v in g['nodeDataArray']:
+        try:
+            if '(' not in v['text']:
+                v['text'] += ' (1)'
+            else:
+                weight = int(v['text'].split(' (')[1][:-1])
+        except Exception as e:
+            return False
+    for l in g['linkDataArray']:
+        try:
+            if not l.get('text'):
+                l['text'] = 'X'
+            if l['text'] == 'X':
+                l['text'] = 1
+            else:
+                weight = int(l['text'])
+        except Exception as e:
+            return False
+    return True
+
+
+def render_diagram_ganta(diagram):
+    s = ""
+    for p in diagram['procs']:
+        for t in p['tasks']:
+            s += t['name'] + " "
+            if t.get('send_to'):
+                s += "-> %s" % t['send_to']
+            s += '\n'
+            s += '-' * t['ticks'] + '\n'
 
 
 if __name__ == '__main__':

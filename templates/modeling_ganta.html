@@ -1,22 +1,43 @@
 {% extends "index.html" %}
 {% block title %}Моделювання{% endblock %}
 {% block head %}
-{{ super() }}
+    {{ super() }}
 {% endblock %}
 {% block content %}
-{{ super() }}
-<div class="ui container">
-    <div class="ui compact big secondary pointing menu">
-        <a class="item" href="{{ url_for('modeling_parameters') }}">
-            Параметри
-        </a>
-        <a class="active item" href="{{ url_for('modeling_ganta') }}">
-            Діаграма Ганта
-        </a>
-        <a class="item"
-           href="{{ url_for('modeling_statistics') }}">
-            Статистика
-        </a>
+    {{ super() }}
+    <div class="ui container">
+        <div class="ui compact big secondary pointing menu">
+            <a class="item" href="{{ url_for('modeling_parameters') }}">
+                Параметри
+            </a>
+            <a class="active item" href="{{ url_for('modeling_ganta') }}">
+                Діаграма Ганта
+            </a>
+            <a class="item"
+               href="{{ url_for('modeling_statistics') }}">
+                Статистика
+            </a>
+        </div>
+        <div align="center">
+            <form>
+                <label>Оберуть граф задачі</label>
+                <select name="task_graph">
+                    {% for t in task_graphs %}
+                        <option value="{{ t.id }}">{{ t.name }}</option>
+                    {% endfor %}
+                </select>
+                <label>Оберуть граф системи</label>
+                <select name="system_graph">
+                    {% for t in system_graphs %}
+                        <option value="{{ t.id }}">{{ t.name }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+        <div>
+            {% if diagram %}
+                <pre>{{ render_ganta(diagram) }}</pre>
+            {% endif %}
+        </div>
     </div>
-</div>
 {% endblock %}

@@ -88,7 +88,7 @@ def statistics():
     return render_template('statistics.html')
 
 
-@app.route('/task-graph/', methods=['GET', 'POST'])
+@app.route('/task-graph/new/', methods=['GET', 'POST'])
 @app.route('/task-graph/<id>/', methods=['GET', 'POST'])
 def save_task_graph(id=None):
     graph = None
@@ -137,15 +137,14 @@ def generate_queue(id):
         v = [i for i in g['nodeDataArray'] if i['id'] == id][0]
         return v['text'].split('(')[0][:-1]
 
-    queue = [get_name(v) for v in queue]
-
     graph.queue = json.dumps(queue)
     db.session.add(graph)
     db.session.commit()
 
+    queue = [get_name(v) for v in queue]
+
     return render_template('task_graph_redactor.html', graph=graph,
                            queue=queue)
-
 
 @app.route('/task-graph/<id>/download/')
 def download_task_graph(id):
@@ -243,7 +242,9 @@ def modeling_ganta():
         task_graph = TaskGraph.query.get(task_graph_id)
         system_graph = CSGraph.query.get(system_graph_id)
         diagram = create_ganta_diagram(task_graph, system_graph)
-        return render_template('modeling_ganta.html', diagram=diagram)
+        return render_template('modeling_ganta.html', diagram=diagram,
+                               task_graphs=TaskGraph.query.all(),
+                               system_graphs=CSGraph.query.all())
 
 
 @app.route('/modeling/statistics/')
@@ -288,7 +289,7 @@ def graph_has_cycle(graph):
 
 def check_connected(graph):
     n, m = len(graph['nodeDataArray']), len(
-            graph['linkDataArray'])  # количество вершин и ребер в графе
+        graph['linkDataArray'])  # количество вершин и ребер в графе
     adj = {i['id']: [] for i in graph['nodeDataArray']}  # список смежности
     for a in graph['linkDataArray']:
         adj[a['from']].append(a['to'])

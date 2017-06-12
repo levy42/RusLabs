@@ -146,6 +146,7 @@ def generate_queue(id):
     return render_template('task_graph_redactor.html', graph=graph,
                            queue=queue)
 
+
 @app.route('/task-graph/<id>/download/')
 def download_task_graph(id):
     graph = TaskGraph.query.get(id)
@@ -234,17 +235,16 @@ def modeling_parameters():
 
 @app.route('/modeling/ganta/', methods=['GET', 'POST'])
 def modeling_ganta():
-    if request.method == 'GET':
-        return render_template('modeling_ganta.html')
-    else:
+    diagram = None
+    if request.method == 'POST':
         task_graph_id = request.form.get('task_graph')
         system_graph_id = request.form.get('system_graph')
         task_graph = TaskGraph.query.get(task_graph_id)
         system_graph = CSGraph.query.get(system_graph_id)
         diagram = create_ganta_diagram(task_graph, system_graph)
-        return render_template('modeling_ganta.html', diagram=diagram,
-                               task_graphs=TaskGraph.query.all(),
-                               system_graphs=CSGraph.query.all())
+    return render_template('modeling_ganta.html', diagram=diagram,
+                           task_graphs=TaskGraph.query.all(),
+                           system_graphs=CSGraph.query.all())
 
 
 @app.route('/modeling/statistics/')
@@ -258,10 +258,6 @@ def help():
 
 
 # tools
-
-def create_ganta_diagram(task_graph, system_graph):
-    pass
-
 
 def graph_has_cycle(graph):
     g = {}
@@ -289,7 +285,7 @@ def graph_has_cycle(graph):
 
 def check_connected(graph):
     n, m = len(graph['nodeDataArray']), len(
-        graph['linkDataArray'])  # количество вершин и ребер в графе
+            graph['linkDataArray'])  # количество вершин и ребер в графе
     adj = {i['id']: [] for i in graph['nodeDataArray']}  # список смежности
     for a in graph['linkDataArray']:
         adj[a['from']].append(a['to'])
@@ -426,13 +422,77 @@ def validate_and_format_graph(g):
 
 def render_diagram_ganta(diagram):
     s = ""
-    for p in diagram['procs']:
-        for t in p['tasks']:
-            s += t['name'] + " "
-            if t.get('send_to'):
-                s += "-> %s" % t['send_to']
-            s += '\n'
-            s += '-' * t['ticks'] + '\n'
+    for p, tasks in diagram.items():
+        s += '\nP{:3s} | '.format(p)
+        for t in tasks:
+            if t[3]:
+                s += " " * t[3] * 4
+            s += str(t[0])
+            s += " " * t[1] * 4
+            if t[2]:
+                for x in t[2]:
+                    s += "->{:2s}".format(str(x))
+        s += '\n     | '
+        for t in tasks:
+            if t[3]:
+                s += "...." * t[3]
+            s += '___:' * (t[1] - 1) + '___|'
+            if t[2]:
+                s += "->->" * t[4]
+    return s
+
+
+def create_ganta_diagram(task_graph, system_graph):
+    # generate P queue
+    p_g = convert(system_graph)
+    p_links = {p: len(p_g[p]) for p in p_g}
+    p_queue = sorted(list(p_g.keys()), key=lambda x: p_links[x])
+
+    # generate Tasks queue
+    t_g = convert(task_graph)
+    t_g_inv = convert_inverted(task_graph)
+    t_w = get_weights(t_g)
+    t_queue = task_graph.queue
+    p_ticks = {p: [] for p in p_g}
+
+    t_p_map = {}
+
+    diagram = {p: [] for p in p_g}
+
+    def asing(t, p):
+        t_p_map[t] = p
+        diagram[p].append(
+                (t, t_w[t], [child for child in t_g[t]], 0, 0))
+
+    # stage 1
+    for t in t_queue:
+        if len(t_g_inv[t]):
+            proc = [p for p in p_queue if
+                    p in [t_p_map.get(t1) for t1 in t_g_inv[t]]][0]
+            p_choices = [t_p_map.get(t1) for t1 in t_g_inv[t]]
+            for i, p in enumerate(p_queue):
+                if p in p_choices:
+                    proc = p
+                    index = i
+                    asing(t, p)
+
+        asing(t, p_queue[0])
+        p_queue.append(p_queue.pop(0))
+
+    # stage 2
+    task_progress = {t: 0 for t in t_g}
+    p_cursors = {p: 0 for p in p_g}
+    while (True):
+        for p in p_g:
+            task = diagram[p][p_cursors[p]]
+            if not t_g_inv[task]:
+                p_ticks[p].append(task)
+    # (task, ticks, send_to, wait_ticks, send_ticks)
+    return {
+        '1': [(1, 5, None, 0, 1), (2, 5, None, 0, 1)],
+        '2': [(3, 2, [2], 0, 1), (4, 7, None, 0, 1)],
+        '3': [(5, 8, None, 0, 1)]
+    }
 
 
 if __name__ == '__main__':

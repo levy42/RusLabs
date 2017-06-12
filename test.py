@@ -98,4 +98,48 @@ g = {"class": "go.GraphLinksModel", "nodeKeyProperty": "id",
          [{"from": 1, "to": 2, "text": 1},
           {"from": 1, "to": 3, "text": 7},
           ]}
-print(get_queue3(g))
+
+
+def render_diagram_ganta(diagram):
+    s = ""
+    for p, tasks in diagram.items():
+        s += '\nP{:3s} | '.format(p)
+        for t in tasks:
+            if t[3]:
+                s += " " * t[3] * 4
+            s += str(t[0])
+            s += " " * t[1] * 4
+            if t[2]:
+                s += "->{:2s}".format(str(t[2]))
+        s += '\n     | '
+        for t in tasks:
+            if t[3]:
+                s += "...." * t[3]
+            s += '___:' * (t[1] - 1) + '___|'
+            if t[2]:
+                s += "->->" * t[4]
+    return s
+
+
+def create_ganta_diagram(task_graph, system_graph):
+    # # generate P queue
+    # p_g = convert(system_graph)
+    # p_links = {p: len(p_g[p]) for p in p_g}
+    # p_queue = sorted(p_g.keys(), key=lambda x: p_links[x])
+    #
+    # # generate Tasks queue
+    # t_g = convert(task_graph)
+    # t_w = get_weights(t_g)
+    # t_queue = task_graph.queue
+    #
+    # diagram = {p for p in p_g}
+
+    # (task, ticks, send_to, wait_ticks, send_ticks)
+    return {
+        '1': [(1, 5, None, 0, 1), (2, 5, None, 0, 1)],
+        '2': [(3, 2, 2, 0, 1), (4, 7, None, 0, 1)],
+        '3': [(5, 8, None, 3, 1)]
+    }
+
+
+print(render_diagram_ganta(create_ganta_diagram(None, None)))

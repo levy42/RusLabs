@@ -18,26 +18,34 @@
                 Статистика
             </a>
         </div>
+        <br><br>
         <div align="center">
-            <form>
-                <label>Оберуть граф задачі</label>
-                <select name="task_graph">
+            <form method="post">
+                <label>Оберіть граф задачі</label>
+                <select class="ui dropdown" name="task_graph">
                     {% for t in task_graphs %}
                         <option value="{{ t.id }}">{{ t.name }}</option>
                     {% endfor %}
                 </select>
-                <label>Оберуть граф системи</label>
-                <select name="system_graph">
+                <label>Оберіть граф системи</label>
+                <select class="ui dropdown" name="system_graph">
                     {% for t in system_graphs %}
                         <option value="{{ t.id }}">{{ t.name }}</option>
                     {% endfor %}
                 </select>
+                <div align="left">
+                    {% if diagram %}
+                        <pre>{{ render_ganta(diagram) }}</pre>
+                    {% endif %}
+                </div>
+                <div class="ui divider"></div>
+                <button class="ui positive button" type="submit">Запустити
+                    планування
+                </button>
             </form>
         </div>
-        <div>
-            {% if diagram %}
-                <pre>{{ render_ganta(diagram) }}</pre>
-            {% endif %}
-        </div>
+        <script>
+            $('.dropdown').dropdown()
+        </script>
     </div>
 {% endblock %}

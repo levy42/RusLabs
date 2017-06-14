@@ -296,7 +296,7 @@ def graph_has_cycle(graph):
 
 def check_connected(graph):
     n, m = len(graph['nodeDataArray']), len(
-            graph['linkDataArray'])  # количество вершин и ребер в графе
+        graph['linkDataArray'])  # количество вершин и ребер в графе
     adj = {i['id']: [] for i in graph['nodeDataArray']}  # список смежности
     for a in graph['linkDataArray']:
         adj[a['from']].append(a['to'])
@@ -686,8 +686,8 @@ class Model(object):
         data.path = self.get_path(task.proc.name, task_to.proc.name)
         data.dest_proc = task_to.proc.name
         print(
-                "Data created: task %s, dest %s" % (
-                    task.name, task_to.proc.name))
+            "Data created: task %s, dest %s" % (
+                task.name, task_to.proc.name))
         return data
 
     def get_path(self, proc1, proc2):

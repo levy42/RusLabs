@@ -112,6 +112,7 @@ def render_diagram_ganta(diagram):
             if t[2]:
                 s += "->{:2s}".format(str(t[2]))
         s += '\n     | '
+        s += '\n     | '
         for t in tasks:
             if t[3]:
                 s += "...." * t[3]

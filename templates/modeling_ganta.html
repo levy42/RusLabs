@@ -33,9 +33,13 @@
                         <option value="{{ t.id }}">{{ t.name }}</option>
                     {% endfor %}
                 </select>
+                <select class="ui dropdown" name="variant">
+                    <option>3</option>
+                    <option>4</option>
+                </select>
                 <div align="left">
                     {% if diagram %}
-                        <pre>{{ render_ganta(diagram) }}</pre>
+                        <pre>{{ diagram }}</pre>
                     {% endif %}
                 </div>
                 <div class="ui divider"></div>
